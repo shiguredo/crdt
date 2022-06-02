@@ -112,7 +112,6 @@ two_actors_test() ->
     ?assertEqual([bar, baz, foo], crdt_orset:to_list(A3)),
     ?assertEqual([bar, baz, foo], crdt_orset:to_list(B3)),
 
-
     %% remove and add (different items).
     A4 = crdt_orset:remove(baz, A3),
     B4 = crdt_orset:add(qux, b, B3),
