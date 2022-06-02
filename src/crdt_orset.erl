@@ -32,7 +32,7 @@ to_list(#?SET{items = Items}) ->
 
 -spec add(item(), actor(), orset()) -> orset().
 add(Item, Actor, #?SET{items = Items0, actors = Actors0} = Set) ->
-    Actors1 = maps:update_with(Actor, fun(C) -> C + 1 end, 0, Actors0),
+    Actors1 = maps:update_with(Actor, fun(C) -> C + 1 end, 1, Actors0),
     C = maps:get(Actor, Actors1),
     Items1 = gb_sets:add({Item, Actor, C}, Items0),
     Items2 = gb_sets:filter(fun(X) ->
@@ -69,6 +69,68 @@ merge(#?SET{items = ItemsA, actors = ActorsA}, #?SET{items = ItemsB, actors = Ac
     U = gb_sets:union([M0, M1, M2]),
     X = maps:map(fun(_, V) -> lists:max(V) end,
                  maps:groups_from_list(fun({Item, _, _}) -> Item end, fun({_, _, C}) -> C end, gb_sets:to_list(U))),
-    Items = gb_sets:filter(fun(Item, _, C) -> C =:= maps:get(Item, X) end, U),
+    Items = gb_sets:filter(fun({Item, _, C}) -> C =:= maps:get(Item, X) end, U),
     Actors = maps:merge_with(fun(_, C0, C1) -> max(C0, C1) end, ActorsA, ActorsB),
+
     #?SET{items = Items, actors = Actors}.
+
+-ifdef(TEST).
+
+-include_lib("eunit/include/eunit.hrl").
+
+
+single_actor_test() ->
+    A0 = crdt_orset:new(),
+    ?assertEqual([], crdt_orset:to_list(A0)),
+
+    A1 = crdt_orset:add(foo, a, A0),
+    ?assertEqual([foo], crdt_orset:to_list(A1)),
+
+    A2 = crdt_orset:add(bar, a, A1),
+    ?assertEqual([bar, foo], crdt_orset:to_list(A2)),
+
+    A3 = crdt_orset:remove(foo, A2),
+    ?assertEqual([bar], crdt_orset:to_list(A3)),
+
+    ok.
+
+
+two_actors_test() ->
+    %% add.
+    A0 = crdt_orset:new(),
+    A1 = crdt_orset:add(foo, a, A0),
+    A2 = crdt_orset:add(bar, a, A1),
+
+    %% add.
+    B0 = crdt_orset:new(),
+    B1 = crdt_orset:add(bar, b, B0),
+    B2 = crdt_orset:add(baz, b, B1),
+
+    %% merge.
+    A3 = crdt_orset:merge(A2, B2),
+    B3 = crdt_orset:merge(B2, A2),
+    ?assertEqual([bar, baz, foo], crdt_orset:to_list(A3)),
+    ?assertEqual([bar, baz, foo], crdt_orset:to_list(B3)),
+
+
+    %% remove and add (different items).
+    A4 = crdt_orset:remove(baz, A3),
+    B4 = crdt_orset:add(qux, b, B3),
+
+    A5 = crdt_orset:merge(A4, B4),
+    B5 = crdt_orset:merge(B4, A4),
+    ?assertEqual([bar, foo, qux], crdt_orset:to_list(A5)),
+    ?assertEqual([bar, foo, qux], crdt_orset:to_list(B5)),
+
+    %% remove and add (the same items).
+    A6 = crdt_orset:remove(foo, A5),
+    B6 = crdt_orset:add(foo, b, B5),
+
+    A7 = crdt_orset:merge(A6, B6),
+    B7 = crdt_orset:merge(B6, A6),
+    ?assertEqual([bar, foo, qux], crdt_orset:to_list(A7)),
+    ?assertEqual([bar, foo, qux], crdt_orset:to_list(B7)),
+
+    ok.
+
+-endif.
