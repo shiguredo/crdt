@@ -1,6 +1,6 @@
 .PHONY: clean upgrade compile test distclean
 
-all: clean upgrade compile dialyzer test
+all: clean upgrade compile dialyzer test proper
 
 upgrade:
 	@./rebar3 upgrade --all
@@ -14,6 +14,9 @@ clean:
 test:
 	@./rebar3 as test eunit
 	@./rebar3 as test cover
+
+proper:
+	@./rebar3 as test proper
 
 dialyzer:
 	@./rebar3 dialyzer
