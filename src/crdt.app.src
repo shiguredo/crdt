@@ -1,14 +1,10 @@
 {application, crdt,
- [{description, "Conflict-free replicated data types"},
-  {vsn, "0.1.0"},
-  {registered, []},
-  {applications,
-   [kernel,
-    stdlib
-   ]},
-  {env,[]},
-  {modules, []},
+              [{description, "Conflict-free replicated data types"},
+               {vsn, "0.1.0"},
+               {registered, []},
+               {applications, [kernel, stdlib]},
+               {env, []},
+               {modules, []},
 
-  {licenses, ["Apache 2.0"]},
-  {links, []}
- ]}.
+               {licenses, ["Apache 2.0"]},
+               {links, []}]}.
