@@ -63,6 +63,7 @@ postcondition(State, {call, _Mod, _Fun, [Node | _]} = Call, Res) ->
     State1 = next_state(State, Res, Call),
     riak_dt_orset:value(maps:get(Node, State1)) =:= Res.
 
+
 %% @doc Assuming the postcondition for a call was true, update the model
 %% accordingly for the test to proceed.
 next_state(State, _Res, {call, ?MODULE, add, [Node, Item]}) ->

@@ -4,11 +4,13 @@
          add/3,
          remove/2,
          merge/2,
-         to_list/1]).
+         to_list/1,
+         to_binary/1,
+         from_binary/1]).
 
 -export_type([orset/0]).
 
--define(SET, ?MODULE).
+-define(SET, ordt_orset_v1).
 
 -record(?SET, {
           items = gb_sets:new() :: gb_sets:set({item(), actor(), non_neg_integer()}),
@@ -74,6 +76,27 @@ merge(#?SET{items = ItemsA, actors = ActorsA}, #?SET{items = ItemsB, actors = Ac
 
     #?SET{items = Items, actors = Actors}.
 
+
+-spec to_binary(orset()) -> binary().
+to_binary(#?SET{} = Set) ->
+    %% TODO: ないとは思うけど gb_sets の内部表現が変わったら読み込めなくなるので、ちょっと検討する
+    term_to_binary(Set).
+
+
+-spec from_binary(binary()) -> {ok, orset()} | {error, invalid_binary}.
+from_binary(<<Bin/binary>>) ->
+    try
+        binary_to_term(Bin)
+    of
+        #?SET{} = Set ->
+            {ok, Set};
+        _ ->
+            {error, invalid_binary}
+    catch
+        error:badarg ->
+            {error, invalid_binary}
+    end.
+
 -ifdef(TEST).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -129,6 +152,17 @@ two_actors_test() ->
     B7 = crdt_orset:merge(B6, A6),
     ?assertEqual([bar, foo, qux], crdt_orset:to_list(A7)),
     ?assertEqual([bar, foo, qux], crdt_orset:to_list(B7)),
+
+    ok.
+
+to_from_binary_test() ->
+    A0 = crdt_orset:new(),
+    A1 = crdt_orset:add(foo, a, A0),
+    A2 = crdt_orset:add(bar, a, A1),
+    A3 = crdt_orset:remove(foo, A2),
+
+    Bin = crdt_orset:to_binary(A3),
+    ?assertMatch({ok, A3}, crdt_orset:from_binary(Bin)),
 
     ok.
 
