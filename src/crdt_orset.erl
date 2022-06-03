@@ -13,7 +13,7 @@
 -define(SET, ordt_orset_v1).
 
 -record(?SET, {
-          items = gb_sets:new() :: gb_sets:set({item(), actor(), non_neg_integer()}),
+          items = ordsets:new() :: ordsets:ordset({item(), actor(), non_neg_integer()}),
           actors = #{} :: #{actor() => non_neg_integer()}
          }).
 
@@ -29,15 +29,15 @@ new() ->
 
 -spec to_list(orset()) -> [item()].
 to_list(#?SET{items = Items}) ->
-    lists:uniq([ Item || {Item, _, _} <- gb_sets:to_list(Items) ]).
+    lists:uniq([ Item || {Item, _, _} <- ordsets:to_list(Items) ]).
 
 
 -spec add(item(), actor(), orset()) -> orset().
 add(Item, Actor, #?SET{items = Items0, actors = Actors0} = Set) ->
     Actors1 = maps:update_with(Actor, fun(C) -> C + 1 end, 1, Actors0),
     C = maps:get(Actor, Actors1),
-    Items1 = gb_sets:add({Item, Actor, C}, Items0),
-    Items2 = gb_sets:filter(fun(X) ->
+    Items1 = ordsets:add_element({Item, Actor, C}, Items0),
+    Items2 = ordsets:filter(fun(X) ->
                                     case X of
                                         {Item, Actor, C0} when C0 < C ->
                                             false;
@@ -51,7 +51,7 @@ add(Item, Actor, #?SET{items = Items0, actors = Actors0} = Set) ->
 
 -spec remove(item(), orset()) -> orset().
 remove(Item, #?SET{items = Items0} = Set) ->
-    Items1 = gb_sets:filter(fun(X) ->
+    Items1 = ordsets:filter(fun(X) ->
                                     case X of
                                         {Item, _, _} ->
                                             false;
@@ -65,13 +65,13 @@ remove(Item, #?SET{items = Items0} = Set) ->
 
 -spec merge(orset(), orset()) -> orset().
 merge(#?SET{items = ItemsA, actors = ActorsA}, #?SET{items = ItemsB, actors = ActorsB}) ->
-    M0 = gb_sets:intersection(ItemsA, ItemsB),
-    M1 = gb_sets:filter(fun({_, Actor, C}) -> C > maps:get(Actor, ActorsB, 0) end, gb_sets:difference(ItemsA, ItemsB)),
-    M2 = gb_sets:filter(fun({_, Actor, C}) -> C > maps:get(Actor, ActorsA, 0) end, gb_sets:difference(ItemsB, ItemsA)),
-    U = gb_sets:union([M0, M1, M2]),
+    M0 = ordsets:intersection(ItemsA, ItemsB),
+    M1 = ordsets:filter(fun({_, Actor, C}) -> C > maps:get(Actor, ActorsB, 0) end, ordsets:subtract(ItemsA, ItemsB)),
+    M2 = ordsets:filter(fun({_, Actor, C}) -> C > maps:get(Actor, ActorsA, 0) end, ordsets:subtract(ItemsB, ItemsA)),
+    U = ordsets:union([M0, M1, M2]),
     X = maps:map(fun(_, V) -> lists:max(V) end,
-                 maps:groups_from_list(fun({Item, _, _}) -> Item end, fun({_, _, C}) -> C end, gb_sets:to_list(U))),
-    Items = gb_sets:filter(fun({Item, _, C}) -> C =:= maps:get(Item, X) end, U),
+                 maps:groups_from_list(fun({Item, _, _}) -> Item end, fun({_, _, C}) -> C end, ordsets:to_list(U))),
+    Items = ordsets:filter(fun({Item, _, C}) -> C =:= maps:get(Item, X) end, U),
     Actors = maps:merge_with(fun(_, C0, C1) -> max(C0, C1) end, ActorsA, ActorsB),
 
     #?SET{items = Items, actors = Actors}.
@@ -79,7 +79,6 @@ merge(#?SET{items = ItemsA, actors = ActorsA}, #?SET{items = ItemsB, actors = Ac
 
 -spec to_binary(orset()) -> binary().
 to_binary(#?SET{} = Set) ->
-    %% TODO: ないとは思うけど gb_sets の内部表現が変わったら読み込めなくなるので、ちょっと検討する
     term_to_binary(Set).
 
 
