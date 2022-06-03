@@ -44,8 +44,9 @@ initial_state() ->
 %% @doc List of possible commands to run against the system
 command(_State) ->
     TargetNode = oneof([node_a, node_b, node_c]),
-    oneof([{call, ?MODULE, add, [TargetNode, term()]},
-           {call, ?MODULE, remove, [TargetNode, term()]},
+    Items = oneof(lists:seq(1, 10)),
+    oneof([{call, ?MODULE, add, [TargetNode, Items]},
+           {call, ?MODULE, remove, [TargetNode, Items]},
            {call, ?MODULE, merge, [TargetNode, TargetNode]}]).
 
 
