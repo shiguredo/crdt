@@ -10,16 +10,17 @@
 
 -export_type([orset/0]).
 
--define(SET, ordt_orset_v1).
+-define(SET, crdt_orset_v1).
 
 -record(?SET, {
-          items = ordsets:new() :: ordsets:ordset({item(), actor(), non_neg_integer()}),
-          actors = #{} :: #{actor() => non_neg_integer()}
+          items = ordsets:new() :: ordsets:ordset({item(), actor(), clock()}),
+          clocks = #{} :: #{actor() => clock()}
          }).
 
 -type orset() :: #?SET{}.
 -type item() :: term().
 -type actor() :: term().
+-type clock() :: pos_integer().
 
 
 -spec new() -> orset().
@@ -33,50 +34,45 @@ to_list(#?SET{items = Items}) ->
 
 
 -spec add(item(), actor(), orset()) -> orset().
-add(Item, Actor, #?SET{items = Items0, actors = Actors0} = Set) ->
-    Actors1 = maps:update_with(Actor, fun(C) -> C + 1 end, 1, Actors0),
-    C = maps:get(Actor, Actors1),
-    Items1 = ordsets:add_element({Item, Actor, C}, Items0),
-    Items2 = ordsets:filter(fun(X) ->
-                                    case X of
-                                        {Item, Actor, C0} when C0 < C ->
-                                            false;
-                                        _ ->
-                                            true
-                                    end
+add(Item, Actor, #?SET{items = Items0, clocks = Clocks0}) ->
+    Clocks1 = maps:update_with(Actor, fun(C) -> C + 1 end, 1, Clocks0),
+    Clock = maps:get(Actor, Clocks1),
+    Items1 = ordsets:add_element({Item, Actor, Clock}, Items0),
+    Items2 = ordsets:filter(fun({I, A, C}) when I =:= Item andalso A =:= Actor ->
+                                    C >= Clock;
+                               (_) ->
+                                    true
                             end,
                             Items1),
-    Set#?SET{items = Items2, actors = Actors1}.
+    #?SET{items = Items2, clocks = Clocks1}.
 
 
 -spec remove(item(), orset()) -> orset().
 remove(Item, #?SET{items = Items0} = Set) ->
-    Items1 = ordsets:filter(fun(X) ->
-                                    case X of
-                                        {Item, _, _} ->
-                                            false;
-                                        _ ->
-                                            true
-                                    end
-                            end,
-                            Items0),
+    Items1 = ordsets:filter(fun({I, _, _}) -> I =/= Item end, Items0),
     Set#?SET{items = Items1}.
 
 
 -spec merge(orset(), orset()) -> orset().
-merge(#?SET{items = ItemsA, actors = ActorsA}, #?SET{items = ItemsB, actors = ActorsB}) ->
-    M0 = ordsets:intersection(ItemsA, ItemsB),
-    M1 = ordsets:filter(fun({_, Actor, C}) -> C > maps:get(Actor, ActorsB, 0) end, ordsets:subtract(ItemsA, ItemsB)),
-    M2 = ordsets:filter(fun({_, Actor, C}) -> C > maps:get(Actor, ActorsA, 0) end, ordsets:subtract(ItemsB, ItemsA)),
-    U = ordsets:union([M0, M1, M2]),
-    X = maps:map(fun(_, V) -> lists:max(V) end,
-                 maps:groups_from_list(fun({Item, Actor, _}) -> {Item, Actor} end,
-                                       fun({_, _, C}) -> C end,
-                                       ordsets:to_list(U))),
-    Items = ordsets:filter(fun({Item, Actor, C}) -> C =:= maps:get({Item, Actor}, X) end, U),
-    Actors = maps:merge_with(fun(_, C0, C1) -> max(C0, C1) end, ActorsA, ActorsB),
+merge(#?SET{items = ItemsA, clocks = ClocksA}, #?SET{items = ItemsB, clocks = ClocksB}) ->
+    CommonItems = ordsets:intersection(ItemsA, ItemsB),
+    OnlyAItems = ordsets:filter(fun({_, A, C}) -> C > maps:get(A, ClocksB, 0) end, ordsets:subtract(ItemsA, ItemsB)),
+    OnlyBItems = ordsets:filter(fun({_, A, C}) -> C > maps:get(A, ClocksA, 0) end, ordsets:subtract(ItemsB, ItemsA)),
+    MergedItems0 = ordsets:union([CommonItems, OnlyAItems, OnlyBItems]),
 
-    #?SET{items = Items, actors = Actors}.
+    ItemAndActorToClocks = maps:groups_from_list(fun({I, A, _}) -> {I, A} end,
+                                                 fun({_, _, C}) -> C end,
+                                                 ordsets:to_list(MergedItems0)),
+    ItemAndActorToClock = maps:map(fun(_, V) -> lists:max(V) end, ItemAndActorToClocks),
+    MergedItems1 = ordsets:filter(fun({I, A, C}) ->
+                                          MaxClock = maps:get({I, A}, ItemAndActorToClock),
+                                          C =:= MaxClock
+                                  end,
+                                  MergedItems0),
+
+    MergedClocks = maps:merge_with(fun(_, C0, C1) -> max(C0, C1) end, ClocksA, ClocksB),
+
+    #?SET{items = MergedItems1, clocks = MergedClocks}.
 
 
 -spec to_binary(orset()) -> binary().
