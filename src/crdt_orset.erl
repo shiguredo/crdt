@@ -70,8 +70,10 @@ merge(#?SET{items = ItemsA, actors = ActorsA}, #?SET{items = ItemsB, actors = Ac
     M2 = ordsets:filter(fun({_, Actor, C}) -> C > maps:get(Actor, ActorsA, 0) end, ordsets:subtract(ItemsB, ItemsA)),
     U = ordsets:union([M0, M1, M2]),
     X = maps:map(fun(_, V) -> lists:max(V) end,
-                 maps:groups_from_list(fun({Item, _, _}) -> Item end, fun({_, _, C}) -> C end, ordsets:to_list(U))),
-    Items = ordsets:filter(fun({Item, _, C}) -> C =:= maps:get(Item, X) end, U),
+                 maps:groups_from_list(fun({Item, Actor, _}) -> {Item, Actor} end,
+                                       fun({_, _, C}) -> C end,
+                                       ordsets:to_list(U))),
+    Items = ordsets:filter(fun({Item, Actor, C}) -> C =:= maps:get({Item, Actor}, X) end, U),
     Actors = maps:merge_with(fun(_, C0, C1) -> max(C0, C1) end, ActorsA, ActorsB),
 
     #?SET{items = Items, actors = Actors}.
@@ -153,6 +155,7 @@ two_actors_test() ->
     ?assertEqual([bar, foo, qux], crdt_orset:to_list(B7)),
 
     ok.
+
 
 to_from_binary_test() ->
     A0 = crdt_orset:new(),

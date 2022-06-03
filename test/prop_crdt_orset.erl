@@ -29,6 +29,32 @@ prop_test() ->
             end).
 
 
+prop_regression_test() ->
+    Cmds0 = [{set, {var, 3}, {call, prop_crdt_orset, add, [node_a, 1]}},
+             {set, {var, 6}, {call, prop_crdt_orset, add, [node_a, 7]}},
+             {set, {var, 8}, {call, prop_crdt_orset, add, [node_b, 7]}},
+             {set, {var, 11}, {call, prop_crdt_orset, merge, [node_c, node_a]}},
+             {set, {var, 19}, {call, prop_crdt_orset, remove, [node_a, 7]}},
+             {set, {var, 20}, {call, prop_crdt_orset, merge, [node_c, node_b]}},
+             {set, {var, 23}, {call, prop_crdt_orset, merge, [node_a, node_c]}}],
+    Cmds1 = [{set, {var, 2}, {call, prop_crdt_orset, add, [node_b, 1]}},
+             {set, {var, 4}, {call, prop_crdt_orset, add, [node_b, 10]}},
+             {set, {var, 6}, {call, prop_crdt_orset, merge, [node_a, node_b]}},
+             {set, {var, 7}, {call, prop_crdt_orset, add, [node_a, 10]}},
+             {set, {var, 9}, {call, prop_crdt_orset, merge, [node_c, node_a]}},
+             {set, {var, 12}, {call, prop_crdt_orset, remove, [node_b, 10]}},
+             {set, {var, 15}, {call, prop_crdt_orset, merge, [node_a, node_b]}}],
+    lists:all(fun(Cmds) ->
+                      actual_system_start(),
+                      {History, State, Result} = run_commands(?MODULE, Cmds),
+                      actual_system_stop(),
+                      ?WHENFAIL(io:format("History: ~p\nState: ~p\nResult: ~p\n", [History, State, Result]),
+                                aggregate(command_names(Cmds), Result =:= ok)),
+                      Result =:= ok
+              end,
+              [Cmds0, Cmds1]).
+
+
 %%%%%%%%%%%%%
 %%% MODEL %%%
 %%%%%%%%%%%%%
@@ -61,7 +87,12 @@ precondition(_State, {call, _Mod, _Fun, _Args}) ->
 %% `Res' (coming from the actual system) makes sense.
 postcondition(State, {call, _Mod, _Fun, [Node | _]} = Call, Res) ->
     State1 = next_state(State, Res, Call),
-    riak_dt_orset:value(maps:get(Node, State1)) =:= Res.
+    case riak_dt_orset:value(maps:get(Node, State1)) =:= Res of
+        true ->
+            true;
+        false ->
+            false
+    end.
 
 
 %% @doc Assuming the postcondition for a call was true, update the model
