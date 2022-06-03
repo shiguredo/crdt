@@ -1,5 +1,7 @@
 # CRDT
 
+ Conflict-free Replicated Data Types in Erlang/OTP.
+
 ## rebar.conf
 
 ```erlang
