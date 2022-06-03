@@ -8,6 +8,9 @@ upgrade:
 compile:
 	@./rebar3 xref
 
+lint:
+	@./rebar3 lint
+
 clean:
 	@./rebar3 clean
 
@@ -26,3 +29,5 @@ distclean:
 
 publish:
 	@./rebar3 hex publish
+
+github: lint compile dialyzer test proper
