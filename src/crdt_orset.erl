@@ -1,6 +1,7 @@
 %%% @doc CRDT ベースの Observed-Remove な集合（セット）の実装
 %%%
-%%% アルゴリズムの詳細は https://arxiv.org/abs/1210.3368 の論文を参照
+%%% アルゴリズムの詳細は https://arxiv.org/abs/1210.3368 の論文の
+%%% 「4.2 Optimized Observed Remove Set」節を参照
 %%%
 %%% @end
 -module(crdt_orset).
