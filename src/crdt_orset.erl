@@ -1,3 +1,8 @@
+%%% @doc CRDT ベースの Observed-Remove な集合（セット）の実装
+%%%
+%%% アルゴリズムの詳細は https://arxiv.org/abs/1210.3368 の論文を参照
+%%%
+%%% @end
 -module(crdt_orset).
 
 -export([new/0,
@@ -8,7 +13,9 @@
          to_binary/1,
          from_binary/1]).
 
--export_type([orset/0]).
+-export_type([orset/0,
+              item/0,
+              actor/0]).
 
 -define(SET, crdt_orset_v1).
 
@@ -17,22 +24,40 @@
           clocks = #{} :: #{actor() => clock()}
          }).
 
--type orset() :: #?SET{}.
+-opaque orset() :: #?SET{}.
+%% 集合
+
 -type item() :: term().
+%% 集合に追加されるアイテム
+
 -type actor() :: term().
+%% 集合にアイテムを追加した主体（e.g., ノード、プロセス）の識別子
+
 -type clock() :: pos_integer().
+%% 集合にアイテムが追加される度にインクリメントされる論理時刻
+%% アクター毎に一つのクロックを保持している
 
 
+%%% @doc 新しい集合を作成する
 -spec new() -> orset().
 new() ->
     #?SET{}.
 
 
+%% @doc 集合内のアイテムをリストとして取得する
+%%
+%% 結果のリストは昇順にソートされている
 -spec to_list(orset()) -> [item()].
 to_list(#?SET{items = Items}) ->
     lists:uniq([ Item || {Item, _, _} <- ordsets:to_list(Items) ]).
 
 
+%% @doc 集合にアイテムを追加する
+%%
+%% `Actor' には、（例えば）この集合がノード間で共有されるものなら `node()' を
+%% プロセス間で共有されるものなら `self()' を指定する
+%%
+%% 別々のアクターが保持する集合の内容を同期するには、別途 `merge/2' を呼び出す必要がある
 -spec add(item(), actor(), orset()) -> orset().
 add(Item, Actor, #?SET{items = Items0, clocks = Clocks0}) ->
     Clocks1 = maps:update_with(Actor, fun(C) -> C + 1 end, 1, Clocks0),
@@ -47,12 +72,16 @@ add(Item, Actor, #?SET{items = Items0, clocks = Clocks0}) ->
     #?SET{items = Items2, clocks = Clocks1}.
 
 
+%% @doc 集合からアイテムを削除する
+%%
+%% 別々のアクターが保持する集合の内容を同期するには、別途 `merge/2' を呼び出す必要がある
 -spec remove(item(), orset()) -> orset().
 remove(Item, #?SET{items = Items0} = Set) ->
     Items1 = ordsets:filter(fun({I, _, _}) -> I =/= Item end, Items0),
     Set#?SET{items = Items1}.
 
 
+%% @doc 二つの集合の内容をマージする
 -spec merge(orset(), orset()) -> orset().
 merge(#?SET{items = ItemsA, clocks = ClocksA}, #?SET{items = ItemsB, clocks = ClocksB}) ->
     CommonItems = ordsets:intersection(ItemsA, ItemsB),
@@ -75,14 +104,16 @@ merge(#?SET{items = ItemsA, clocks = ClocksA}, #?SET{items = ItemsB, clocks = Cl
     #?SET{items = MergedItems1, clocks = MergedClocks}.
 
 
+%% @doc 集合をバイナリデータに変換する
 -spec to_binary(orset()) -> binary().
 to_binary(#?SET{} = Set) ->
     term_to_binary(Set).
 
 
+%% @doc バイナリデータから集合を復元する
 -spec from_binary(binary()) -> {ok, orset()} | {error, invalid_binary}.
 from_binary(<<Bin/binary>>) ->
-    try binary_to_term(Bin)of
+    try binary_to_term(Bin) of
         #?SET{} = Set ->
             {ok, Set};
         _ ->

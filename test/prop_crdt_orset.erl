@@ -8,7 +8,6 @@
          precondition/2,
          postcondition/3]).
 
-%% TODO: comment
 -export([add/2,
          remove/2,
          merge/2]).
@@ -29,6 +28,7 @@ prop_test() ->
             end).
 
 
+%% 過去に proper が発見したバグの再現を防止するためのテストケース
 prop_regression_test() ->
     Cmds0 = [{set, {var, 3}, {call, prop_crdt_orset, add, [node_a, 1]}},
              {set, {var, 6}, {call, prop_crdt_orset, add, [node_a, 7]}},
