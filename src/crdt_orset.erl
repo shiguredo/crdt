@@ -82,9 +82,7 @@ to_binary(#?SET{} = Set) ->
 
 -spec from_binary(binary()) -> {ok, orset()} | {error, invalid_binary}.
 from_binary(<<Bin/binary>>) ->
-    try
-        binary_to_term(Bin)
-    of
+    try binary_to_term(Bin)of
         #?SET{} = Set ->
             {ok, Set};
         _ ->
