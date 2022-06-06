@@ -1,0 +1,23 @@
+on:
+  push:
+    paths-ignore:
+    - 'LICENSE'
+    - '**.md'
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    if: "! contains(github.event.head_commit.message, 'skip ci')"
+    container:
+      image: shiguredo/erlang:otp-25.0-openssl-3.0.3-ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - run: make github
+      - name: Slack Notification
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_CHANNEL: ${{ secrets.SLACK_INTERNAL_CHANNEL }}
+          SLACK_COLOR: danger
+          SLACK_TITLE: Failure test
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

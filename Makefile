@@ -1,25 +1,34 @@
 .PHONY: clean upgrade compile test distclean
 
-all: clean upgrade compile dialyzer test
+all: clean upgrade compile dialyzer test proper
 
 upgrade:
+	@./rebar3 plugins upgrade --all
 	@./rebar3 upgrade --all
 
 compile:
-	@./rebar3 xref
+	@ERL_FLAGS="-enable-feature maybe_expr" ./rebar3 xref
+
+lint:
+	@ERL_FLAGS="-enable-feature maybe_expr" ./rebar3 lint
 
 clean:
 	@./rebar3 clean
 
 test:
-	@./rebar3 as test eunit
-	@./rebar3 as test cover
+	@ERL_FLAGS="-enable-feature maybe_expr" ./rebar3 as test eunit
+	@ERL_FLAGS="-enable-feature maybe_expr" ./rebar3 as test cover
+
+proper:
+	@ERL_FLAGS="-enable-feature maybe_expr" ./rebar3 as test proper
 
 dialyzer:
-	@./rebar3 dialyzer
+	@ERL_FLAGS="-enable-feature maybe_expr" ./rebar3 dialyzer
 
 distclean:
 	@./rebar3 clean --all
 
 publish:
 	@./rebar3 hex publish
+
+github: lint compile dialyzer test proper

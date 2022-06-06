@@ -1,0 +1,12 @@
+.eunit/*
+deps/*
+ebin/*
+.DS_Store
+tags
+*.plt
+.rebar/*
+
+_build/*
+test/.rebar3/
+
+.efmt/

@@ -1,14 +1,13 @@
+%% @efmt:off
 {application, crdt,
- [{description, "Conflict-free replicated data types"},
-  {vsn, "0.1.0"},
+ [
+  {description, "Conflict-free replicated data types"},
+  {pkg_name, shiguredo_crdt},
+  {vsn, "2022.1.0"},
   {registered, []},
-  {applications,
-   [kernel,
-    stdlib
-   ]},
-  {env,[]},
+  {applications, [kernel, stdlib]},
+  {env, []},
   {modules, []},
-
-  {licenses, ["Apache 2.0"]},
-  {links, []}
- ]}.
+  {licenses, ["Apache License, Version 2.0"]},
+  {links, [{"Github", "https://github.com/shiguredo/crdt"}]}
+]}.
