@@ -8,7 +8,7 @@ CRDT (conflict-free replicated data types) の Erlang 実装です。
 現在は [An optimized conflict-free replicated set](https://arxiv.org/abs/1210.3368) で説明されている
 "Optimized OR-Set" のみが提供されています。
 
-## rebar.conf
+## rebar.config
 
 ```erlang
 {deps, [{crdt, "2022.1.0", {pkg, shiguredo_crdt}}]}.
